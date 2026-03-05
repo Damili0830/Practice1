@@ -18,8 +18,13 @@ item_pattern = re.compile(
     r"([\d ]+,\d{2})",                  # total price
     re.MULTILINE
 )
+#r"" — raw string (backslashes \ are treated literally in Python)
+#\d — any digit (0–9)
+#+ — one or more repetitions of the previous element
+#() — capturing group used to store matched text
+# whitespace character (space, tab, etc.)
+#\d{2} — exactly two digits
 
-items = []
 calculated_total = 0
 
 # Loop through all found items
@@ -54,7 +59,7 @@ receipt_total = (
 datetime_match = re.search(
     r"\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}:\d{2}", text
 )
-date_time = datetime_match.group() if datetime_match else None
+date_time = datetime_match.group() if datetime_match else None #if a match is found, .group() returns the matched string:
 
 # Final structured result
 result = {
@@ -65,4 +70,5 @@ result = {
 }
 
 # Print result in readable JSON format
-print(json.dumps(result, indent=4, ensure_ascii=False))
+print(json.dumps(result, indent=4, ensure_ascii=False)) #`json.dumps()` converts the `result` dictionary into a JSON string,
+# `indent=4` makes it readable with spacing, `ensure_ascii=False` keeps non-ASCII characters readable
