@@ -12,11 +12,11 @@ with open("raw.txt", "r", encoding="utf-8") as f:
 # - unit price
 # - total price per item
 item_pattern = re.compile(
-    r"\d+\.\n"                          # item number (e.g. 1.)
-    r"(.+?)\n"                          # product name
-    r"([\d,]+)\s*x\s*([\d ]+,\d{2})\n"  # quantity x unit price
-    r"([\d ]+,\d{2})",                  # total price
-    re.MULTILINE
+    r"\d+\.\n"                  # matches the item number followed by a dot and a new line (e.g. "1.")
+    r"(.+?)\n"                          # captures the product name until the next line
+    r"([\d,]+)\s*x\s*([\d ]+,\d{2})\n"  # captures quantity and unit price (e.g. "2 x 1 200,00")
+    r"([\d ]+,\d{2})",                   # captures the total price of the item
+    re.MULTILINE  # allows the pattern to work across multiple lines
 )
 #r"" — raw string (backslashes \ are treated literally in Python)
 #\d — any digit (0–9)
@@ -24,7 +24,7 @@ item_pattern = re.compile(
 #() — capturing group used to store matched text
 # whitespace character (space, tab, etc.)
 #\d{2} — exactly two digits
-
+items = []
 calculated_total = 0
 
 # Loop through all found items
