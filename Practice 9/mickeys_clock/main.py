@@ -1,40 +1,46 @@
-
 import pygame
 import sys
-from clock import draw_clock
+import datetime
+from clock import Clock
 
-# Initialize all imported Pygame modules
 pygame.init()
 
-# Set up the display window dimensions (600x600 pixels)
 WIDTH, HEIGHT = 600, 600
-# Create the game window with specified dimensions
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-# Set the title that appears on the window title bar
 pygame.display.set_caption("Mickey Clock")
 
-# Create a Clock object to control the frame rate
-clock = pygame.time.Clock()
+# создаём объект часов (ПОСЛЕ WIDTH)
+clock = Clock(WIDTH // 2, HEIGHT // 2)
 
-# Start the main game loop (runs forever until user quits)
-while True:
-    # Check all events that have happened since the last frame
+# загрузка картинки
+image = pygame.image.load("images/mickeyclock.jpeg")
+image = pygame.transform.scale(image, (600, 600))
+
+running = True
+while running:
+    now = datetime.datetime.now()
+    seconds = now.second
+    minutes = now.minute
+
+    screen.fill((255, 255, 255))
+
     for event in pygame.event.get():
-        # If the user clicked the close button (X) on the window
         if event.type == pygame.QUIT:
-            # Uninitialize all Pygame modules (cleanup)
-            pygame.quit()
-            # Exit the program completely
-            sys.exit()
+            running = False
 
-    # Call the draw_clock function from clock.py
-    # This function draws the Mickey Mouse clock face with moving hands
-    draw_clock(screen)
+    # рисуем фон
+    screen.blit(image, (0, 0))
 
-    # Update the full display surface to the screen
-    # Without this, nothing would be visible
+    center_x, center_y = WIDTH // 2, HEIGHT // 2 + 20
+
+    sec_x, sec_y = clock.get_second_hand(seconds)
+    min_x, min_y = clock.get_minute_hand(minutes)
+
+    # рисуем стрелки
+    pygame.draw.line(screen, (255, 0, 0), (center_x, center_y), (sec_x, sec_y), 3)
+    pygame.draw.line(screen, (0, 0, 0), (center_x, center_y), (min_x, min_y), 6)
+
     pygame.display.flip()
 
-    # Control the frame rate to 60 frames per second
-    # This keeps the clock smooth and prevents using 100% CPU
-    clock.tick(60)
+pygame.quit()
+sys.exit()
