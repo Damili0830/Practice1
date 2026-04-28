@@ -1,0 +1,79 @@
+[
+    {
+        "name": "Alim",
+        "phone": "+77787766767",
+        "email": "alim@gmail.com",
+        "birthday": "2008-03-04",
+        "group": "1"
+    },
+    {
+        "name": "Bob",
+        "phone": "+77476676769",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Emir",
+        "phone": "+77777777003",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Dastan",
+        "phone": "+77757660562",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Bob",
+        "phone": "+77476676769",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Dastan",
+        "phone": "+77757660562",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Bob",
+        "phone": "+77476676769",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Dastan",
+        "phone": "+77757660562",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Aisha",
+        "phone": "+76676676767",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Baisakov",
+        "phone": "+77777777777",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    },
+    {
+        "name": "Baisakov",
+        "phone": "+77777777777",
+        "email": null,
+        "birthday": "None",
+        "group": null
+    }
+]
