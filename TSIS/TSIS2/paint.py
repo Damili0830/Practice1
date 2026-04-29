@@ -84,6 +84,7 @@ def draw_eq_triangle(surf, col, p1, p2, size, fill=False):
     pts = [p1,
            (int(bx + perp_x/2), int(by + perp_y/2)),
            (int(bx - perp_x/2), int(by - perp_y/2))]
+    # draw filled or outlined triangle
     if fill: pygame.draw.polygon(surf, col, pts)
     else:    pygame.draw.polygon(surf, col, pts, max(1, size))
 
@@ -104,10 +105,11 @@ def draw_rhombus(surf, col, p1, p2, size, fill=False):
 #Fill function
 def flood_fill(surface, x, y, new_col):
     old_col = surface.get_at((x, y))[:3]
-    if old_col == new_col: return
+
+    if old_col == new_col: return # if color is the same, do nothing
     w, h = surface.get_size()
-    stack, visited = [(x, y)], set()
-    surface.lock()
+    stack, visited = [(x, y)], set() # stack for DFS,# stack for DFS
+    surface.lock() # lock surface for faster pixel access
     while stack:
         cx, cy = stack.pop()
         if (cx,cy) in visited: continue
@@ -115,29 +117,33 @@ def flood_fill(surface, x, y, new_col):
         if surface.get_at((cx,cy))[:3] != old_col: continue
         surface.set_at((cx,cy), new_col)
         visited.add((cx,cy))
+        # add neighbors
         stack += [(cx+1,cy),(cx-1,cy),(cx,cy+1),(cx,cy-1)]
     surface.unlock()
 
-#Saving canvas
+#Saving canvas as image using file dialog
 def save_file(canvas):
-    root = tk.Tk(); root.withdraw()
+    root = tk.Tk();
+    root.withdraw() # hide main window
     path = filedialog.asksaveasfilename(
         defaultextension=".png",
         filetypes=[("PNG","*.png"),("JPEG","*.jpg"),("BMP","*.bmp")],
         title="Save canvas")
     root.destroy()
+    # Save canvas as image using file dialog
     if path: pygame.image.save(canvas, path)
 
 #The application
 class PaintApp:
     def __init__(self):
+        # Main application class
         self.screen = pygame.display.set_mode((WIN_W, WIN_H))
         pygame.display.set_caption("Paint")
-
+        # Create window
         self.canvas = pygame.Surface((CANVAS_W, CANVAS_H))
         self.canvas.fill(CANVAS_C)
 
-        # State
+        # Current tool and drawing settings
         self.tool        = "freehand"
         self.color       = (0, 0, 0)
         self.brush_size  = 4

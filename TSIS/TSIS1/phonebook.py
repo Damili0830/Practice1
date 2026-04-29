@@ -11,27 +11,29 @@ conn = psycopg2.connect(
     port="5432"
 )
 
-cur = conn.cursor()
+cur = conn.cursor() # cursor allows us to execute SQL queries
 
 JSON_FILE = "contacts.json"
 
-
+# FUNCTION-Get group ID or create group if it doesn't exist
 def get_group_id(group_name):
-    group_name = group_name or "default"
+    group_name = group_name or "default" # if empty,use "default"
 
+    # Check if group already exists
     cur.execute("SELECT id FROM groups WHERE name = %s", (group_name,))
     result = cur.fetchone()
 
     if result:
-        return result[0]
+        return result[0]  # return existing id
 
+    # If not exists,create new group
     cur.execute(
         "INSERT INTO groups(name) VALUES (%s) RETURNING id",
         (group_name,)
     )
-    return cur.fetchone()[0]
+    return cur.fetchone()[0]      # return new id
 
-
+# FUNCTION-Add or update contact
 def add_contact():
     name = input("Name: ")
     phone = input("Phone: ")
@@ -41,10 +43,11 @@ def add_contact():
 
     gid = get_group_id(group_name)
 
+    # Check if contact already exists
     cur.execute("SELECT id FROM contacts WHERE name = %s", (name,))
     existing = cur.fetchone()
 
-    if existing:
+    if existing: # Ask user if they want to overwrite
         choice = input("Contact exists. overwrite? (yes/no): ")
 
         if choice.lower() != "yes":
@@ -52,13 +55,14 @@ def add_contact():
             return
 
         contact_id = existing[0]
-
+        # Update existing contact info
         cur.execute("""
             UPDATE contacts
             SET email = %s, birthday = %s, group_id = %s
             WHERE id = %s
         """, (email, birthday, gid, contact_id))
 
+        # Delete old phones and insert new one
         cur.execute("DELETE FROM phones WHERE contact_id = %s", (contact_id,))
         cur.execute(
             "INSERT INTO phones(contact_id, phone) VALUES (%s, %s)",
@@ -79,14 +83,14 @@ def add_contact():
             (contact_id, phone)
         )
 
-    conn.commit()
+    conn.commit() # save changes
     print("Done!")
 
-
+# FUNCTION-Add additional phone to existing contact
 def add_phone():
     name = input("Name: ")
     phone = input("New phone: ")
-
+    # Find contact by name
     cur.execute("SELECT id FROM contacts WHERE name = %s", (name,))
     result = cur.fetchone()
 
@@ -104,10 +108,11 @@ def add_phone():
     conn.commit()
     print("Phone added!")
 
-
+# FUNCTION-Filter contacts by group
 def filter_group():
     group_name = input("Group: ")
 
+    # Join tables to get full info
     cur.execute("""
         SELECT c.name, p.phone, c.email, c.birthday
         FROM contacts c
@@ -125,10 +130,10 @@ def filter_group():
         for row in rows:
             print(row)
 
-
+# FUNCTION-Search contacts
 def search():
     q = input("Search: ").strip()
-
+    # Search by name, phone or email using ILIKE (case-insensitive)
     cur.execute("""
         SELECT c.name, p.phone, c.email, c.birthday, g.name
         FROM contacts c
@@ -148,13 +153,14 @@ def search():
         for row in rows:
             print(row)
 
-
+# FUNCTION- Sort contacts
 def sort_contacts():
     field = input("Sort by (name/birthday/created_at): ")
 
+    # Validate field to prevent SQL injection
     if field not in ["name", "birthday", "created_at"]:
         field = "name"
-
+    # Dynamic ORDER BY
     cur.execute(f"""
         SELECT c.name, p.phone, c.email, c.birthday
         FROM contacts c
@@ -165,10 +171,11 @@ def sort_contacts():
     for row in cur.fetchall():
         print(row)
 
-
+# FUNCTION-Pagination (show data in parts)
 def paginate():
-    limit = 3
-    offset = 0
+    limit = 3 # number of records per page
+    offset = 0 # starting point
+
 
     while True:
         cur.execute("""
@@ -197,7 +204,7 @@ def paginate():
         else:
             break
 
-
+# FUNCTION-Export contacts to JSON file
 def export_json():
     cur.execute("""
         SELECT c.id, c.name, c.email, c.birthday, g.name
@@ -209,13 +216,14 @@ def export_json():
     data = []
 
     for contact_id, name, email, birthday, group_name in cur.fetchall():
+        # Get all phones for this contact
         cur.execute(
             "SELECT phone FROM phones WHERE contact_id = %s",
             (contact_id,)
         )
 
         phones = [row[0] for row in cur.fetchall()]
-
+        # Build dictionary
         data.append({
             "name": name,
             "phones": phones,
@@ -223,18 +231,18 @@ def export_json():
             "birthday": str(birthday) if birthday else None,
             "group": group_name
         })
-
+    # Write to file
     with open(JSON_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
     print("Exported!")
 
-
+# FUNCTION: Import contacts from JSON
 def import_json():
     if not os.path.exists(JSON_FILE):
         print("contacts.json not found")
         return
-
+    # Load data
     with open(JSON_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -263,16 +271,17 @@ def import_json():
                 continue
 
             contact_id = existing[0]
-
+            # Update contact
             cur.execute("""
                 UPDATE contacts
                 SET email = %s, birthday = %s, group_id = %s
                 WHERE id = %s
             """, (email, birthday, gid, contact_id))
-
+            # Remove old phones
             cur.execute("DELETE FROM phones WHERE contact_id = %s", (contact_id,))
 
         else:
+            # Insert new contact
             cur.execute("""
                 INSERT INTO contacts(name, email, birthday, group_id)
                 VALUES (%s, %s, %s, %s)
@@ -296,7 +305,7 @@ def import_json():
     conn.commit()
     print("Imported!")
 
-
+# FUNCTION-Delete contact
 def delete_contact():
     name = input("Enter name to delete: ")
 
@@ -308,14 +317,14 @@ def delete_contact():
         return
 
     contact_id = result[0]
-
+    # Delete phones first (because of foreign key)
     cur.execute("DELETE FROM phones WHERE contact_id = %s", (contact_id,))
     cur.execute("DELETE FROM contacts WHERE id = %s", (contact_id,))
 
     conn.commit()
     print("Deleted successfully!")
 
-
+# MAIN MENU
 def menu():
     while True:
         print("""
@@ -357,7 +366,8 @@ def menu():
             print("Wrong choice")
 
 
-menu()
+menu() #run program
 
+# Close database connection
 cur.close()
 conn.close()

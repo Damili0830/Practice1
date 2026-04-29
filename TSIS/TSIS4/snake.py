@@ -12,7 +12,7 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-
+# Get player ID or create a new player if not exists
 def get_or_create_player(username):
     cur.execute("SELECT id FROM players WHERE username=%s", (username,))
     res = cur.fetchone()
@@ -24,7 +24,7 @@ def get_or_create_player(username):
     conn.commit()
     return cur.fetchone()[0]
 
-
+# Save game result to database
 def save_game(player_id, score, level):
     cur.execute(
         "INSERT INTO game_sessions(player_id, score, level_reached) VALUES(%s,%s,%s)",
@@ -32,7 +32,7 @@ def save_game(player_id, score, level):
     )
     conn.commit()
 
-
+# Get top 10 scores
 def get_top10():
     cur.execute("""
         SELECT username, score FROM game_sessions
@@ -41,7 +41,7 @@ def get_top10():
     """)
     return cur.fetchall()
 
-
+# Get best score of current player
 def get_best(player_id):
     cur.execute("SELECT MAX(score) FROM game_sessions WHERE player_id=%s", (player_id,))
     res = cur.fetchone()[0]
@@ -56,7 +56,7 @@ settings = {
 }
 
 pygame.init()
-# Const values
+# Window size and grid settings
 WIDTH, HEIGHT = 800, 600
 CELL = 20
 PADDING = 4
@@ -83,11 +83,12 @@ SHIELD = (56, 54, 179)
 
 
 # DRAW
+# Draw text on screen
 def draw_text(text, x, y, selected=False):
     color = (255, 255, 0) if selected else WHITE
     screen.blit(font.render(text, True, color), (x, y))
 
-
+# Draw checkerboard background
 def draw_bg():
     for r in range(HEIGHT // CELL):
         for c in range(WIDTH // CELL):
@@ -96,7 +97,7 @@ def draw_bg():
             pygame.draw.rect(screen, color, rect)
             pygame.draw.rect(screen, (0, 60, 0), rect, 1)
 
-
+# Generate random position (not on snake or obstacles)
 def random_position(snake, obstacles):
     while True:
         pos = (random.randint(0, WIDTH // CELL - 1) * CELL,
@@ -106,6 +107,7 @@ def random_position(snake, obstacles):
 
 
 # POWERUPS
+# Randomly spawn power-up with small probability
 def spawn_powerup(snake, obstacles):
     if random.random() < 0.01:
         return random.choice(["speed", "slow", "shield"]), random_position(snake, obstacles)
@@ -113,6 +115,7 @@ def spawn_powerup(snake, obstacles):
 
 
 # USERNAME
+# Username input screen
 def get_username():
     name = ""
     while True:
@@ -162,6 +165,7 @@ def settings_menu():
     while True:
         screen.fill((0, 0, 0))
 
+        # Display settings
         draw_text(f"Difficulty: {settings['difficulty']}", 300, 200, sel == 0)
         draw_text(f"Controls: {settings['controls']}", 300, 250, sel == 1)
         draw_text(f"Grid: {settings['grid']}", 300, 300, sel == 2)
@@ -174,10 +178,13 @@ def settings_menu():
                 if e.key == pygame.K_DOWN: sel = (sel + 1) % 4
 
                 if e.key == pygame.K_RETURN:
+                    # Change difficulty
                     if sel == 0:
                         settings["difficulty"] = settings["difficulty"] % 3 + 1
+                        # Switch controls
                     elif sel == 1:
                         settings["controls"] = "ARROWS" if settings["controls"] == "WASD" else "WASD"
+                        # Toggle grid
                     elif sel == 2:
                         settings["grid"] = not settings["grid"]
                     elif sel == 3:
@@ -186,19 +193,23 @@ def settings_menu():
         pygame.display.flip()
 
 
-# GAME
+# GAME LOGIC
 def game(player_id, best):
+    # Initial snake
     snake = [(100, 100)]
     direction = (CELL, 0)
 
     obstacles = []
+    # Food
     food = random_position(snake, obstacles)
     food_type = "apple"
     food_val = 1
 
+    # Poison
     poison = None
     poison_timer = 0
 
+    # Power-ups
     powerup = None
     power_pos = None
     effect = None
@@ -208,6 +219,7 @@ def game(player_id, best):
     level = 1
     lives = 3
 
+    # Speed based on difficulty
     base_speed = {1: 8, 2: 10, 3: 14}[settings["difficulty"]]
     speed = base_speed
 
@@ -215,9 +227,11 @@ def game(player_id, best):
     while True:
         draw_bg()
 
+        # Handle input
         for e in pygame.event.get():
             if e.type == pygame.QUIT: exit()
             if e.type == pygame.KEYDOWN:
+                # Movement controls
                 if settings["controls"] == "WASD":
                     if e.key == pygame.K_w and direction != (0, CELL): direction = (0, -CELL)
                     if e.key == pygame.K_s and direction != (0, -CELL): direction = (0, CELL)
@@ -228,16 +242,19 @@ def game(player_id, best):
                     if e.key == pygame.K_DOWN and direction != (0, -CELL): direction = (0, CELL)
                     if e.key == pygame.K_LEFT and direction != (CELL, 0): direction = (-CELL, 0)
                     if e.key == pygame.K_RIGHT and direction != (-CELL, 0): direction = (CELL, 0)
-
+        # Handle input
         head = (snake[0][0] + direction[0], snake[0][1] + direction[1])
 
         # COLLISIONS
+        # Wall collision
         if not (0 <= head[0] < WIDTH and 0 <= head[1] < HEIGHT):
             if effect != "shield":
                 break
+                # Self collision
         if head in snake:
             if effect != "shield":
                 break
+                # Obstacle collision
         if head in obstacles:
             if effect != "shield":
                 break
@@ -249,9 +266,11 @@ def game(player_id, best):
             score += food_val
             food = random_position(snake, obstacles)
 
+            # Random new food
             food_type = random.choice(["apple", "pear", "peach"])
             food_val = {"apple": 1, "pear": 2, "peach": 3}[food_type]
 
+            # Level up
             if score % 5 == 0:
                 level += 1
                 speed += 2
@@ -264,9 +283,11 @@ def game(player_id, best):
             poison = random_position(snake, obstacles)
             poison_timer = pygame.time.get_ticks()
 
+        # Poison disappears after 6 seconds
         if poison and pygame.time.get_ticks() - poison_timer > 6000:
             poison = None
 
+        # Hit poison → lose life
         if poison and head == poison:
             lives -= 1
             poison = None
@@ -290,10 +311,11 @@ def game(player_id, best):
                 effect = "shield"
                 effect_end = pygame.time.get_ticks() + 5000
             powerup = None
-
+        # Effect expires
         if effect and pygame.time.get_ticks() > effect_end:
             speed = base_speed + (level - 1) * 2
             effect = None
+
 
         # DRAW SNAKE
         for s in snake:

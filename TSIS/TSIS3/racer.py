@@ -133,8 +133,9 @@ class Coin:
     def __init__(self):
         self.x = random.randint(50, WIDTH - 50)
         self.y = -20
-        # random coin type
+        # Random type with probabilities
         self.t = random.choices(["bronze", "silver", "gold"], [60, 30, 10])[0]
+        # Set value, color, size
         if self.t == "bronze":
             self.v = 1;self.c = BRONZE;self.r = 10
         elif self.t == "silver":
@@ -166,7 +167,8 @@ class Obstacle:
     def __init__(self, t):
         self.x = random.randint(50, WIDTH - 100)
         self.y = -50
-        self.t = t
+        self.t = t # type
+
 
     def update(self):
         self.y += ROAD_SCROLL
@@ -208,7 +210,7 @@ class Game:
         self.background_playing = False
 
         self.reset_game()
-
+        # UI buttons
         self.buttons = {
             "play": Button(180, 200, 120, 40, "PLAY"),
             "lb": Button(180, 260, 120, 40, "LEADERBOARD"),
@@ -250,6 +252,7 @@ class Game:
 
     # SAFE SPAWN
     def safe_x(self):
+        # Prevent spawning too close to player
         while True:
             x = random.randint(50, WIDTH - 100)
             if abs(x - self.player.x) > 100:
@@ -257,6 +260,7 @@ class Game:
 
     # Spawn items
     def spawn(self):
+        # Random spawning
         if random.random() < 0.5: self.coins.append(Coin())
         if random.random() < 0.3:
             e = Enemy(self.enemy_speed)
@@ -273,89 +277,110 @@ class Game:
 
     # Collisions
     def hit(self, a, b):
+        # Simple collision check
+
         return abs(a.x - b.x) < 40 and abs(a.y - b.y) < 60
 
     # Checking for collisions
     def check(self):
-        for c in self.coins[:]:
-            if self.hit(c, self.player):
+
+        #  COINS
+        for c in self.coins[:]: # iterate over copy (safe removal)
+            if self.hit(c, self.player): # iterate over copy (safe removal)
                 self.score += c.v * 10
                 self.coins.remove(c)
                 # Play coin sound
                 self.play_sound(COIN_SOUND)
 
+        # ENEMIES
         for e in self.enemies[:]:
             if self.hit(e, self.player):
+                # Increase score based on coin value
+                # Shield absorbs damage
                 if self.player.shield <= 0:
                     self.player.hp -= 1
+
                     self.play_sound(HURT_SOUND)
                 else:
+                    # If no shield → player takes damage
                     self.play_sound(POWERUP_SOUND)
                 self.enemies.remove(e)
                 # Play crash sound
                 self.play_sound(CRASH_SOUND)
 
+        #  POWER-UPS
         for o in self.obs[:]:
             if self.hit(o, self.player):
                 if o.t == "boost":
+                    # Increase game difficulty (enemy speed)
                     self.enemy_speed += 1
                     self.play_sound(BOOST_SOUND)
                 elif o.t == "barrier" and self.player.shield <= 0:
+                    # Increase game difficulty (enemy speed)
                     self.player.hp -= 1
                     self.play_sound(HURT_SOUND)
                     self.play_sound(CRASH_SOUND)
-                self.obs.remove(o)
+                self.obs.remove(o)  # Remove obstacle after collision
 
+        # POWER-UPS
         for p in self.pups[:]:
             if self.hit(p, self.player):
                 if p.t == "shield":
+                    # Activate shield for some time (frames)
                     self.player.shield = 300
                     self.play_sound(POWERUP_SOUND)
                 elif p.t == "nitro":
+                    # Speed boost + increase difficulty
                     self.player.nitro = 200
                     self.enemy_speed += 1
                     self.play_sound(BOOST_SOUND)
                 elif p.t == "repair":
+                    # Heal player (max HP = 3)
                     self.player.hp = min(3, self.player.hp + 1)
                     self.play_sound(POWERUP_SOUND)
                 self.pups.remove(p)
 
+        # GAME OVER CHECK
         if self.player.hp <= 0 and self.state != "gameover":
             self.save_score()
             self.state = "gameover"
+            # Play game over sound
             self.play_sound(GAMEOVER_SOUND)
             # Stop background sound on game over
             self.stop_background()
 
-    # Saving the score
+    # SAVE SCORE TO LEADERBOARD
     def save_score(self):
         data = load_lb()
-        data.append({"name": "Player", "score": self.score, "dist": self.dist})
-        data = sorted(data, key=lambda x: x["score"], reverse=True)[:10]
+        data.append({"name": "Player", "score": self.score, "dist": self.dist})  # Add new record
+        data = sorted(data, key=lambda x: x["score"], reverse=True)[:10] # Sort by score (descending) and keep top 10
         save_lb(data)
 
+    # Increase distance and score over time
     def update(self):
         self.dist += 1
         self.score += 1
 
-        self.player.update()
+        self.player.update()# Update player timers (shield, nitro)
 
+        # Update all objects
         for l in [self.coins, self.enemies, self.obs, self.pups]:
             for i in l: i.update()
-
+        # Remove objects that left the screen
         self.coins = [c for c in self.coins if c.y < HEIGHT]
         self.enemies = [e for e in self.enemies if e.y < HEIGHT]
         self.obs = [o for o in self.obs if o.y < HEIGHT]
         self.pups = [p for p in self.pups if p.y < HEIGHT]
 
         self.check()
-
+        # Random spawning of objects
         if random.random() < 0.05: self.spawn()
 
         # Start background sound if not playing and game is active
         if not self.background_playing and self.state == "play" and self.player.hp > 0:
             self.start_background()
 
+    # DRAW EVERYTHING ON SCREEN
     def draw(self):
         self.s.blit(ROAD, (0, 0))
         self.player.draw(self.s)
@@ -376,6 +401,7 @@ class Game:
             shield_text = FONT.render(f"SHIELD: {self.player.shield // 60}", True, SHIELD_COLOR)
             self.s.blit(shield_text, (WIDTH - 100, 10))
 
+    # LEADERBOARD SCREEN
     def leaderboard(self):
         self.s.fill(BLACK)
         self.s.blit(BIG.render("LEADERBOARD", True, WHITE), (120, 30))
@@ -391,6 +417,7 @@ class Game:
 
         self.buttons["back"].draw(self.s)
 
+    # LEADERBOARD SCREEN Shows final score and options to restart or return to menu.
     def gameover(self):
         self.s.fill(BLACK)
         self.s.blit(BIG.render("GAME OVER", True, RED), (140, 200))
@@ -399,16 +426,19 @@ class Game:
         self.buttons["retry"].draw(self.s)
         self.buttons["back"].draw(self.s)
 
+    # MAIN MENU SCREEN
     def menu(self):
         self.s.fill(BLACK)
         self.s.blit(BIG.render("RACER", True, WHITE), (180, 100))
         for b in [self.buttons["play"], self.buttons["lb"], self.buttons["quit"]]: b.draw(self.s)
 
+    # MAIN GAME LOOP
     def run(self):
         run = True
         while run:
             self.c.tick(FPS)
 
+            # EVENT HANDLING
             for e in pygame.event.get():
                 if e.type == pygame.QUIT: run = False
 
@@ -434,7 +464,7 @@ class Game:
 
                     elif self.state == "leaderboard":
                         if self.buttons["back"].click(pos): self.state = "menu"
-
+            #  KEYBOARD INPUT
             keys = pygame.key.get_pressed()
             dx = dy = 0
             if keys[pygame.K_LEFT]: dx = -1
@@ -443,7 +473,7 @@ class Game:
             if keys[pygame.K_DOWN]: dy = 1
 
             self.player.move(dx, dy)
-
+            # STATE MANAGEMENT
             if self.state == "menu":
                 self.menu()
             elif self.state == "play":
